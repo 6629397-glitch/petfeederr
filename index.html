@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>petFeeder — Minimal Brown</title>
+  <style>
+    :root{
+      --bg:#f6efe7;
+      --card:#fff;
+      --ink:#3e2a20;
+      --ink-soft:#6e5447;
+      --brown:#8b5e3c;
+      --brown-2:#6f4427;
+      --pill:#fff7f0;
+      --mono: ui-monospace,Consolas,monospace;
+      --border:#ead9cc;
+      --border-soft:#eadad0;
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;padding:0;background:var(--bg);color:var(--ink);
+      font:16px/1.5 Inter,Segoe UI,system-ui,-apple-system,sans-serif
+    }
+    .container{max-width:1100px;margin:0 auto;padding:16px}
+    h1{font-weight:800;letter-spacing:.3px;text-align:center;margin:4px 0 14px}
+    h1 span{color:var(--brown)}
+    h2{margin:0 0 12px 0}
+
+    .card{
+      background:var(--card);
+      border-radius:14px;
+      padding:16px 16px 18px;
+      border:1px solid var(--border);
+      box-shadow:0 6px 18px rgba(0,0,0,.05)
+    }
+
+    .grid{display:grid;gap:18px;grid-template-columns:1fr 1fr}
+    .span2{grid-column:span 2}
+    .grid2{display:grid;gap:16px;grid-template-columns:1fr 1fr}
+
+    .row{display:flex;align-items:center}
+    .wrap{flex-wrap:wrap}
+    .between{justify-content:space-between}
+    .gap{gap:10px}
+    .top16{margin-top:16px}
+    .top18{margin-top:18px}
+    .top24{margin-top:24px}
+
+    /* ปุ่ม */
+    .btn{
+      background:var(--brown);color:#fff;border:none;
+      padding:10px 14px;border-radius:10px;cursor:pointer;
+      transition:transform .04s ease, background .15s ease
+    }
+    .btn:hover{background:var(--brown-2)}
+    .btn:active{transform:translateY(1px)}
+    .btn.sm{padding:6px 10px;border-radius:8px;font-size:13px}
+    .btn.light{background:#e3d2c3;color:var(--ink)}
+    .btn.light:hover{background:#d5c0ad}
+    .btn.accent{background:#a0683f}
+    .btn[disabled]{opacity:.6;pointer-events:none}
+
+    /* input */
+    input,select{
+      border:1px solid #d9c6b6;border-radius:10px;
+      padding:10px 12px;min-width:160px;background:#fff;color:var(--ink)
+    }
+
+
+
+    /* พิลล์สถานะ */
+    .pillRow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    .pill{background:var(--pill);border:1px solid #ecd9c8;border-radius:999px;padding:6px 10px;font-size:13px}
+    .mono{font-family:var(--mono)}
+
+    /* รายการประวัติ/ตาราง */
+    .list{list-style:none;margin:10px 0 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+    .item{
+      display:flex;align-items:center;justify-content:space-between;
+      background:#fff;border:1px solid var(--border-soft);
+      border-radius:10px;padding:10px 12px
+    }
+    .item small{color:var(--ink-soft)}
+    .item .act{gap:6px;display:flex}
+
+    .hint{margin-top:10px;color:var(--ink-soft);font-size:13px}
+
+    /* แถบเครื่องมือของ “ตั้งเวลา” */
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .toolbar .btn{min-width:130px}
+    .toolbar .btn.accent{min-width:140px}
+
+    /* footer */
+    .foot{opacity:.7;text-align:center;padding:12px 0 32px}
+
+    /* responsive */
+    @media (max-width:960px){
+      .grid{grid-template-columns:1fr}
+      .span2{grid-column:span 1}
+      .grid2{grid-template-columns:1fr}
+    }
+    @media (max-width:480px){
+      .toolbar .btn{width:100%}
+      input,select{min-width:unset;width:100%}
+    }
+  </style>
+</head>
+<body>
+  <header class="container">
+    <h1>🐾 Feeder — <span>Minimal Brown</span></h1>
+  </header>
+
+  <main class="container grid">
+    <!-- กล้อง + ควบคุมพื้นฐาน -->
+    <section class="card">
+
+      <div class="row gap feedRow">
+        <button class="btn accent" id="btnFeed">ให้อาหารตอนนี้</button>
+      </div>
+
+      <div class="pillRow">
+        <span class="pill" id="lblBatt">แบตฯ: --%</span>
+        <span class="pill" id="lblTime">เวลา: --:--:--</span>
+        
+      </div>
+    </section>
+
+    <!-- ตั้งเวลา -->
+    <section class="card">
+      <h2>ตั้งเวลาให้อาหาร</h2>
+
+      <div class="toolbar top16">
+        <input type="time" id="timeInput">
+        <select id="repeatSel">
+          <option value="everyday">ทุกวัน</option>
+          <option value="weekday">จันทร์-ศุกร์</option>
+          <option value="weekend">เสาร์-อาทิตย์</option>
+        </select>
+
+        <button class="btn" id="btnAddSchedule">เพิ่มเวลา</button>
+        <button class="btn light" id="btnClearSchedule">ลบทั้งหมด</button>
+
+        <!-- ปุ่มซิงก์กับบอร์ด -->
+        <button class="btn accent" id="btnSaveBoard">บันทึกเวลา</button>
+        <button class="btn light" id="btnLoadBoard">โหลด</button>
+      </div>
+
+      <ul class="list" id="scheduleList"></ul>
+      <p class="hint">ตารางเวลาถูกเก็บในเบราว์เซอร์ และสามารถ “บันทึกลงบอร์ด/โหลดจากบอร์ด” ได้จากปุ่มด้านบน</p>
+    </section>
+
+    <!-- ประวัติ -->
+    <section class="card span2">
+      <h2>ประวัติ</h2>
+      <div class="grid2">
+        <div>
+          <div class="row gap between">
+            <h3>ให้อาหาร</h3>
+            <button class="btn light sm" id="btnClearFeed">ล้างประวัติ</button>
+          </div>
+          <ul class="list" id="feedList"></ul>
+        </div>
+        <div>
+          <div class="row gap between">
+            <h3>การตั้งเวลา</h3>
+            <button class="btn light sm" id="btnClearSchedule2">ล้างประวัติ</button>
+          </div>
+          <ul class="list" id="scheduleHist"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ตั้งค่า Wi-Fi ผ่าน DevKit -->
+  </main>
+
+  <footer class="container foot">
+    <span>v2 • เก็บข้อมูลใน LocalStorage • ตารางทำงานจริงบนบอร์ด (NVS + NTP)</span>
+  </footer>
+
+  <script>
+    // ---- State ----
+    const LS = {
+      
+      ctrl: 'pf_ctrl_base',
+      feed: 'pf_feed_hist',
+      sched: 'pf_sched_list',
+      schedHist: 'pf_sched_hist',
+      camBase: 'pf_cam_base'            // <-- เพิ่ม
+};
+
+    let ctrlBase = localStorage.getItem(LS.ctrl) || 'http://10.0.0.50';
+    
+
+    // ---- Elements ----
+    const btnSetCam = document.getElementById('btnSetCam');
+    const lblCtrl = document.getElementById('lblCtrl');
+    const lblTime = document.getElementById('lblTime');
+    const lblBatt = document.getElementById('lblBatt');
+
+    const btnFeed = document.getElementById('btnFeed');
+
+    // Schedules / History
+    const timeInput = document.getElementById('timeInput');
+    const repeatSel = document.getElementById('repeatSel');
+    const btnAddSchedule = document.getElementById('btnAddSchedule');
+    const btnClearSchedule = document.getElementById('btnClearSchedule');
+    const btnClearSchedule2 = document.getElementById('btnClearSchedule2');
+    const btnSaveBoard = document.getElementById('btnSaveBoard');
+    const btnLoadBoard = document.getElementById('btnLoadBoard');
+    const scheduleList = document.getElementById('scheduleList');
+    const scheduleHist = document.getElementById('scheduleHist');
+
+    const feedList = document.getElementById('feedList');
+    const btnClearFeed = document.getElementById('btnClearFeed');
+
+    // WiFi config
+    const ctrlBaseInput = document.getElementById('ctrlBase');
+    const ssid = document.getElementById('ssid');
+    const pass = document.getElementById('pass');
+    const token = document.getElementById('token');
+    const btnSetWifi = document.getElementById('btnSetWifi');
+
+    // Elements ของส่วนกล้อง
+const camBaseInput = document.getElementById('camBase');
+const camSsid = document.getElementById('camSsid');
+const camPass = document.getElementById('camPass');
+const camToken = document.getElementById('camToken');
+const btnSetWifiCam = document.getElementById('btnSetWifiCam');
+
+camBaseInput.value = camBase;
+// ถ้าคุณต้องการ auto-fill จากช่อง IP สตรีม
+// const savedCamIp = localStorage.getItem(LS.cam);
+// if (!camBase && savedCamIp) camBaseInput.value = camBase = 'http://' + savedCamIp;
+
+camBaseInput.addEventListener('change', ()=>{
+  camBase = camBaseInput.value.trim();
+  localStorage.setItem(LS.camBase, camBase);
+});
+
+
+
+    // ---- Init ----
+    (function init(){
+      lblCtrl.textContent = 'CTRL: ' + ctrlBase;
+      ctrlBaseInput.value = ctrlBase;
+
+      const savedCam = localStorage.getItem(LS.cam);
+      if(savedCam){ camIp.value = savedCam; setCamera(); }
+
+      renderAll();
+      tick();
+      setInterval(tick, 3000);
+    })();
+
+
+
+    // ---- DevKit basic actions ----
+    let feeding = false; // กันกดรัว 2 วิ
+    btnFeed.addEventListener('click', async ()=>{
+      if (feeding) return;
+      feeding = true;
+      btnFeed.disabled = true;
+      try {
+        await fetch(ctrlBase + '/feed');
+        pushFeed('ให้อาหารทันที');
+        renderHistory();
+      } catch(e){
+        alert('ส่งคำสั่งไม่สำเร็จ');
+      } finally {
+        setTimeout(()=>{ feeding = false; btnFeed.disabled = false; }, 2000);
+      }
+    });
+
+    // ---- Poll status ----
+async function tick(){
+  try {
+    const r = await fetch(ctrlBase + '/status');
+    const j = await r.json();
+    lblTime.textContent = 'เวลา DevKit: ' + (j.time || '--:--:--');
+    lblBatt.textContent = 'แบตฯ: ' + (j.vbat || '--%');
+  } catch(e){
+    lblBatt.textContent = 'แบตฯ: --%';  // ถ้าอ่านไม่สำเร็จ
+  }
+}
+
+
+
+    // ---- Schedule (LocalStorage + Board sync) ----
+    btnAddSchedule.addEventListener('click', ()=>{
+      if(!timeInput.value) return;
+      const arr = getJson(LS.sched, []);
+      const item = { id: Date.now(), time: timeInput.value, repeat: repeatSel.value };
+      arr.push(item);
+      setJson(LS.sched, arr);
+      pushSchedHist('เพิ่มเวลา ' + item.time + ' • ' + prettyRepeat(item.repeat));
+      renderSchedules();
+    });
+
+    btnClearSchedule.addEventListener('click', ()=>{
+      setJson(LS.sched, []);
+      renderSchedules();
+    });
+
+    btnClearSchedule2.addEventListener('click', ()=>{
+      setJson(LS.schedHist, []);
+      renderSchedules();
+    });
+
+    btnSaveBoard.addEventListener('click', syncScheduleToBoard);
+    btnLoadBoard.addEventListener('click', loadScheduleFromBoard);
+
+    async function syncScheduleToBoard(){
+      const arr = getJson(LS.sched, []);
+      const body = {
+        token: "changeme", // ต้องตรงกับ ADMIN_TOKEN ในเฟิร์มแวร์
+        schedules: arr.map(a => ({ time: a.time, repeat: a.repeat }))
+      };
+      try {
+        await fetch(ctrlBase + '/schedule', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(body)
+        });
+        alert('✅ บันทึกตารางแล้ว');
+      } catch(e){
+        alert('❌ ส่งไม่สำเร็จ');
+      }
+    }
+
+    async function loadScheduleFromBoard(){
+      try {
+        const r = await fetch(ctrlBase + '/schedule');
+        const arr = await r.json();
+        const mapped = arr.map(a => ({ id: Date.now()+Math.random(), time: a.time, repeat: a.repeat }));
+        setJson(LS.sched, mapped);
+        renderSchedules();
+        alert('✅ โหลดตารางจากบอร์ดแล้ว');
+      } catch(e){
+        alert('❌ โหลดไม่สำเร็จ');
+      }
+    }
+
+    function renderSchedules(){
+      const arr = getJson(LS.sched, []);
+      scheduleList.innerHTML = arr.map(a => `
+        <li class="item">
+          <div>
+            <strong>${a.time}</strong> <small>${prettyRepeat(a.repeat)}</small>
+          </div>
+          <div class="act">
+            <button class="btn sm light" onclick="delSchedule(${a.id})">ลบ</button>
+          </div>
+        </li>`).join('');
+      renderScheduleHist();
+    }
+    window.delSchedule = function(id){
+      let arr = getJson(LS.sched, []);
+      arr = arr.filter(i => i.id !== id);
+      setJson(LS.sched, arr);
+      pushSchedHist('ลบเวลา');
+      renderSchedules();
+    };
+
+    function prettyRepeat(rep){
+      return rep==='everyday'?'ทุกวัน':rep==='weekday'?'จันทร์-ศุกร์':'เสาร์-อาทิตย์';
+    }
+
+    // ---- History (feed & schedule) ----
+    btnClearFeed.addEventListener('click', ()=>{ setJson(LS.feed, []); renderHistory(); });
+
+    function pushFeed(txt){
+      const arr = getJson(LS.feed, []);
+      arr.unshift({ id: Date.now(), text: txt, t: new Date().toLocaleString() });
+      setJson(LS.feed, arr);
+    }
+    function renderHistory(){
+      const arr = getJson(LS.feed, []);
+      feedList.innerHTML = arr.map(a => `
+        <li class="item">
+          <div><strong>${a.text}</strong> <small>${a.t}</small></div>
+          <div class="act"><button class="btn sm light" onclick="delFeed(${a.id})">ลบ</button></div>
+        </li>`).join('');
+    }
+    window.delFeed = function(id){
+      let arr = getJson(LS.feed, []);
+      arr = arr.filter(i=>i.id!==id);
+      setJson(LS.feed, arr);
+      renderHistory();
+    };
+
+    function pushSchedHist(txt){
+      const arr = getJson(LS.schedHist, []);
+      arr.unshift({ id: Date.now(), text: txt, t: new Date().toLocaleString() });
+      setJson(LS.schedHist, arr);
+    }
+    function renderScheduleHist(){
+      const arr = getJson(LS.schedHist, []);
+      scheduleHist.innerHTML = arr.map(a => `
+        <li class="item">
+          <div><strong>${a.text}</strong> <small>${a.t}</small></div>
+          <div class="act"><button class="btn sm light" onclick="delSchedHist(${a.id})">ลบ</button></div>
+        </li>`).join('');
+    }
+    window.delSchedHist = function(id){
+      let arr = getJson(LS.schedHist, []);
+      arr = arr.filter(i=>i.id!==id);
+      setJson(LS.schedHist, arr);
+      renderScheduleHist();
+    }
+
+    // render all
+    function renderAll(){ renderSchedules(); renderHistory(); }
+
+    // ---- Change Wi-Fi ----
+
+    // ---- utils ----
+    function getJson(k, d){ try { return JSON.parse(localStorage.getItem(k)) || d } catch { return d } }
+    function setJson(k, v){ localStorage.setItem(k, JSON.stringify(v)) }
+  </script>
+</body>
+</html>
